@@ -3,33 +3,15 @@ local M = {}
 
 local global_buf, global_win
 
-local function create_or_open_file(path)
-	local file_exists = vim.fn.filereadable(path) == 1
+local function open_window()
+	global_buf = vim.api.nvim_create_buf(false, true)
 
-	-- If the file doesn't exist, create it
-	if not file_exists then
-		local file_handle, err = io.open(path, "w")
-		if file_handle == nil then
-			print("JsonViz: Error creating file:", err)
-			return nil
-		end
-		file_handle:close()
-	end
-
-	local bufnr = vim.fn.bufadd(path)
-	return bufnr
-end
-
-local function open_window(path, content)
-	global_buf = create_or_open_file(path)
-	if global_buf == nil then
-		print("JsonViz: Error creating file")
-		return
-	end
-
-	-- vim.api.nvim_buf_set_option(global_buf, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(global_buf, "bufhidden", "hide")
 	vim.api.nvim_buf_set_option(global_buf, "readonly", true)
+	vim.api.nvim_buf_set_option(global_buf, "bufhidden", "")
+	vim.api.nvim_buf_set_option(global_buf, "buftype", "nofile")
+
+	-- Define key mapping to close the buffer with 'q'
+	vim.api.nvim_buf_set_keymap(global_buf, "n", "q", "<Cmd>q<CR>", { noremap = true, silent = true })
 
 	-- get dimensions
 	local width = vim.api.nvim_get_option("columns")
@@ -106,8 +88,6 @@ end
 function M.setup(opts)
 	-- TODO: Set opts
 
-	-- Define a command to trigger the JSON visualizer
-	-- vim.cmd([[command! JSONViz :lua require('plugins.jsonviz').jsonviz()]])
 	vim.cmd("command! JSONViz lua require('jsonviz').jsonviz()")
 	vim.keymap.set("n", "<leader>js", ":JSONViz<CR>", { desc = "Open JSONViz" })
 end
@@ -117,16 +97,12 @@ function M.jsonviz()
 		return
 	end
 
-	-- Get the current filename
-	local filename = vim.api.nvim_buf_get_name(0)
-	local jsonbufname = "/tmp/JSONViz-" .. vim.fn.sha256(filename)
-
 	-- Get the JSON content of the current buffer
 	local json_content = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, true), "\n")
 	local parsed_json = json.decode(json_content)
 	local jsonrepr = build_json_structure(parsed_json, 0)
 
-	open_window(jsonbufname)
+	open_window()
 	update_view(jsonrepr)
 end
 
