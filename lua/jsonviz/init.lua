@@ -1,4 +1,5 @@
-local json = require("../libs/json")
+local json = require("json/json")
+local M = {}
 
 local global_buf, global_win
 
@@ -26,9 +27,9 @@ local function open_window(path, content)
 		return
 	end
 
-	vim.api.nvim_buf_set_option(global_buf, "bufhidden", "wipe")
+	-- vim.api.nvim_buf_set_option(global_buf, "bufhidden", "wipe")
+	vim.api.nvim_buf_set_option(global_buf, "bufhidden", "hide")
 	vim.api.nvim_buf_set_option(global_buf, "readonly", true)
-	vim.api.nvim_buf_set_lines(global_buf, 0, -1, true, content)
 
 	-- get dimensions
 	local width = vim.api.nvim_get_option("columns")
@@ -52,16 +53,8 @@ local function open_window(path, content)
 		col = col,
 	}
 
-	-- and finally create it with buffer attached
 	global_win = vim.api.nvim_open_win(global_buf, true, opts)
-	-- vim.api.nvim_open_win(global_buf, true, {
-	-- 	relative = "editor",
-	-- 	width = 80,
-	-- 	height = 50,
-	-- 	col = 100,
-	-- 	row = 0,
-	-- 	style = "minimal",
-	-- })
+	return global_win
 end
 
 -- Function to build a text-based representation of the JSON structure
@@ -104,7 +97,22 @@ local function build_json_structure(json_obj, indent_level)
 	return result
 end
 
-local function jsonviz()
+local function update_view(content)
+	vim.api.nvim_buf_set_option(global_buf, "modifiable", true)
+	vim.api.nvim_buf_set_lines(global_buf, 0, -1, true, vim.split(content, "\n"))
+	vim.api.nvim_buf_set_option(global_buf, "modifiable", false)
+end
+
+function M.setup(opts)
+	-- TODO: Set opts
+
+	-- Define a command to trigger the JSON visualizer
+	-- vim.cmd([[command! JSONViz :lua require('plugins.jsonviz').jsonviz()]])
+	vim.cmd("command! JSONViz lua require('jsonviz').jsonviz()")
+	vim.keymap.set("n", "<leader>js", ":JSONViz<CR>", { desc = "Open JSONViz" })
+end
+
+function M.jsonviz()
 	if vim.bo.filetype ~= "json" then
 		return
 	end
@@ -118,13 +126,9 @@ local function jsonviz()
 	local parsed_json = json.decode(json_content)
 	local jsonrepr = build_json_structure(parsed_json, 0)
 
-	open_window(jsonbufname, vim.split(jsonrepr, "\n"))
+	open_window(jsonbufname)
+	update_view(jsonrepr)
 end
 
--- Define a command to trigger the JSON visualizer
-vim.cmd([[command! JSONViz :lua require('plugins.jsonviz').jsonviz()]])
-
 -- Return the module table
-return {
-	jsonviz = jsonviz,
-}
+return M
