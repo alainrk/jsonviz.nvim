@@ -39,41 +39,51 @@ local function open_window()
 	return global_win
 end
 
--- Function to build a text-based representation of the JSON structure
-local function build_json_structure(json_obj, indent_level)
+local function infer_json_schema(key, json_obj)
+	local schema = {}
+
+	if type(json_obj) == "table" then
+		for k, value in pairs(json_obj) do
+			if type(value) == "table" then
+				schema[k] = infer_json_schema(k, value)
+			else
+				schema[k] = type(value)
+			end
+		end
+	else
+		schema[key] = type(json_obj)
+	end
+
+	return schema
+end
+
+local function prettify_json(json_obj, indent_level)
+	indent_level = indent_level or 0
+	local indent_str = string.rep("  ", indent_level)
 	local result = ""
 
 	if type(json_obj) == "table" then
-		-- If the JSON object is a table
-		if #json_obj > 0 then
-			-- Check if all children are leaves
-			local all_leaves = true
-			for _, value in ipairs(json_obj) do
-				if type(value) == "table" then
-					all_leaves = false
-					break
-				end
-			end
+		local is_empty_table = next(json_obj) == nil
 
-			-- If all children are leaves, print "Array" and return
-			if all_leaves then
-				return string.rep("  ", indent_level) .. "Array\n"
+		if not is_empty_table then
+			result = result .. "{\n"
+			for key, value in pairs(json_obj) do
+				result = result
+					.. indent_str
+					.. '  "'
+					.. key
+					.. '": '
+					.. prettify_json(value, indent_level + 1)
+					.. ",\n"
 			end
+			result = result .. indent_str .. "}"
+		else
+			result = "{}"
 		end
-
-		-- If it's an object, iterate over its keys
-		for key, value in pairs(json_obj) do
-			-- Indentation based on the current level
-			local indent = string.rep("  ", indent_level)
-
-			-- Add key to the result with proper indentation
-			result = result .. indent .. key .. "\n"
-
-			-- Recursively build the structure for the value (if it's a table)
-			if type(value) == "table" then
-				result = result .. build_json_structure(value, indent_level + 1)
-			end
-		end
+	elseif type(json_obj) == "string" then
+		result = result .. '"' .. json_obj .. '"'
+	else
+		result = result .. tostring(json_obj)
 	end
 
 	return result
@@ -100,7 +110,9 @@ function M.jsonviz()
 	-- Get the JSON content of the current buffer
 	local json_content = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, true), "\n")
 	local parsed_json = json.decode(json_content)
-	local jsonrepr = build_json_structure(parsed_json, 0)
+
+	-- Build the output
+	local jsonrepr = prettify_json(infer_json_schema("/", parsed_json), 2)
 
 	open_window()
 	update_view(jsonrepr)
