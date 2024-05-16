@@ -39,35 +39,65 @@ local function open_window()
 	return global_win
 end
 
-local function infer_json_schema(key, json_obj)
+local function is_array(table)
+	if type(table) ~= "table" then
+		return false
+	end
+
+	-- objects always return empty size
+	if #table > 0 then
+		return true
+	end
+
+	-- only object can have empty length with elements inside
+	for _, _ in pairs(table) do
+		return false
+	end
+
+	-- if no elements it can be array and not at same time
+	return true
+end
+
+local function infer_json_schema(key, obj)
 	local schema = {}
 
-	if type(json_obj) == "table" then
-		for k, value in pairs(json_obj) do
-			if type(value) == "table" then
-				schema[k] = infer_json_schema(k, value)
+	if type(obj) == "table" then
+		schema = {}
+		schema["props"] = {}
+		if is_array(obj) then
+			schema["type"] = "array"
+			if #obj > 0 then
+				schema["props"] = infer_json_schema("props", obj[1])["props"]
+			end
+			return schema
+		end
+
+		schema["type"] = "object"
+		for k, v in pairs(obj) do
+			if type(v) == "table" then
+				schema["props"][k] = infer_json_schema(k, v)
 			else
-				schema[k] = type(value)
+				schema["props"][k] = type(v)
 			end
 		end
 	else
-		schema[key] = type(json_obj)
+		schema[key] = type(obj)
 	end
 
 	return schema
 end
 
-local function prettify_json(json_obj, indent_level)
+local function prettify_json(obj, indent_level)
 	indent_level = indent_level or 0
 	local indent_str = string.rep("  ", indent_level)
 	local result = ""
 
-	if type(json_obj) == "table" then
-		local is_empty_table = next(json_obj) == nil
+	if type(obj) == "table" then
+		local is_empty_table = next(obj) == nil
 
 		if not is_empty_table then
 			result = result .. "{\n"
-			for key, value in pairs(json_obj) do
+			for key, value in pairs(obj) do
 				result = result
 					.. indent_str
 					.. '  "'
@@ -80,10 +110,10 @@ local function prettify_json(json_obj, indent_level)
 		else
 			result = "{}"
 		end
-	elseif type(json_obj) == "string" then
-		result = result .. '"' .. json_obj .. '"'
+	elseif type(obj) == "string" then
+		result = result .. '"' .. obj .. '"'
 	else
-		result = result .. tostring(json_obj)
+		result = result .. tostring(obj)
 	end
 
 	return result
