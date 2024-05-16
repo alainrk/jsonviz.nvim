@@ -1,3 +1,14 @@
 # [WIP] JsonViz.nvim
 
-Json visualizer plugin
+JSON schema visualizer plugin
+
+## Installation
+
+### Lazyvim
+
+```lua
+return {
+  "alainrk/jsonviz.nvim",
+  opts = {},
+}
+```

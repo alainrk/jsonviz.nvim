@@ -6,8 +6,5 @@ end
 if vim.g.loaded_jsonviz == 1 then
 	return
 end
-vim.g.loaded_jsonviz = 1
 
--- vim.api.nvim_create_user_command("JsonViz", function(opts)
--- 	require("jsonviz").jsonviz(opts)
--- end)
+vim.g.loaded_jsonviz = 1

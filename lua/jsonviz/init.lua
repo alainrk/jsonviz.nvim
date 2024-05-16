@@ -125,13 +125,6 @@ local function update_view(content)
 	vim.api.nvim_buf_set_option(global_buf, "modifiable", false)
 end
 
-function M.setup(opts)
-	-- TODO: Set opts
-
-	vim.cmd("command! JSONViz lua require('jsonviz').jsonviz()")
-	vim.keymap.set("n", "<leader>js", ":JSONViz<CR>", { desc = "Open JSONViz" })
-end
-
 function M.jsonviz()
 	if vim.bo.filetype ~= "json" then
 		return
@@ -148,5 +141,11 @@ function M.jsonviz()
 	update_view(jsonrepr)
 end
 
--- Return the module table
+function M.setup(opts)
+	opts = opts or {}
+
+	vim.cmd("command! JSONViz lua require('jsonviz').jsonviz()")
+	vim.keymap.set("n", "<leader>js", ":JSONViz<CR>", { desc = "Open JSONViz" })
+end
+
 return M
